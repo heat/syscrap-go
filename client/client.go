@@ -5,6 +5,7 @@ import (
     "fmt"
     "github.com/heat/syscrapgo/cotacaosrv"
     "github.com/heat/syscrapgo/eventosrv"
+    "log"
 )
 
 type ApiClient interface {
@@ -19,12 +20,13 @@ type ApiClientOptions struct {
     Key string
 }
 
-func MakeApiClient(kind string, conf *ApiClientOptions) (ApiClient, error) {
+func MakeApiClient(kind string, logger *log.Logger, conf *ApiClientOptions) (ApiClient, error) {
     switch kind {
     case "betsapi":
         return &betsApiClient{
             URL: conf.URL,
             Key: conf.Key,
+            logger: logger,
         }, nil
     }
 

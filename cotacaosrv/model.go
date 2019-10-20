@@ -5,6 +5,7 @@ type OddRef struct {
     Linha   bool   `json:"linha"`
     Posicao int    `json:"posicao"`
     Tipo    string `json:"tipo"`
+    V       float64 `json:"-"`
 }
 
 type Odd struct {
@@ -16,7 +17,6 @@ type Odd struct {
     Odd    string  `json:"odd"`
     Ref    OddRef  `json:"ref,omitempty"`
     Taxa   float64 `json:"taxa"`
-    Mulv   string  `json:"mulv"`
     Ts     int64   `json:"ts"`
 }
 

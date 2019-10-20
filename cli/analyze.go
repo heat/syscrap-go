@@ -2,6 +2,7 @@ package cli
 
 import (
     "encoding/json"
+    "fmt"
     apiclient "github.com/heat/syscrapgo/client"
     "github.com/heat/syscrapgo/cotacaosrv"
     "github.com/heat/syscrapgo/eventosrv"
@@ -32,9 +33,11 @@ var analyzeCmd = &cobra.Command{
         jww.SetLogThreshold(jww.LevelDebug)
         jww.SetStdoutThreshold(jww.LevelDebug)
 
+        logger := jww.LOG
+
         kk := viper.GetString("apikey")
 
-        api, err := apiclient.MakeApiClient(api, &apiclient.ApiClientOptions{
+        api, err := apiclient.MakeApiClient(api, logger, &apiclient.ApiClientOptions{
             URL: apis[api],
             Key: kk,
         })
@@ -46,17 +49,35 @@ var analyzeCmd = &cobra.Command{
 
         evento, err := api.Get(source)
         if err != nil {
-            jww.CRITICAL.Fatal(err)
+            jww.CRITICAL.Fatal(err.Error())
         }
 
         odds, err := api.GetOddsRaw(source)
         if err != nil {
-            jww.CRITICAL.Fatal(err)
+            jww.CRITICAL.Fatal(err.Error())
         }
 
-        jsons, err := json.Marshal(analyzeResult{evento, odds})
+        oddsFound := make(cotacaosrv.Odds, 0)
+        oddsNotFound := make(cotacaosrv.Odds, 0)
+        // passada contabilizacao
+        for _, odd := range(*odds) {
+            ref, found := cotacaosrv.GetOddRef(odd.Fonte)
+            if found {
+                jww.DEBUG.Printf("odd=%s ref=%s linha=%.2f\n", odd.Fonte, ref.Codigo, ref.V)
+                odd.Ref = *ref
+                odd.Codigo = fmt.Sprintf("odd_%s", ref.Codigo)
+                odd.Odd = ref.Codigo
+                odd.Linha = ref.V
+                oddsFound = append(oddsFound, odd)
+            } else {
+                jww.DEBUG.Printf("odd=%s not found!", odd.Fonte)
+                oddsNotFound = append(oddsNotFound, odd)
+            }
+        }
+
+        jsons, err := json.Marshal(analyzeResult{evento, &oddsFound, &oddsNotFound})
         if err != nil {
-            jww.CRITICAL.Fatal(err)
+            jww.CRITICAL.Fatal(err.Error())
         }
         jww.FEEDBACK.Println(string(jsons))
     },
@@ -65,6 +86,7 @@ var analyzeCmd = &cobra.Command{
 type analyzeResult struct {
     Evento *eventosrv.Evento `json:"evento"`
     Odds *cotacaosrv.Odds `json:"odds"`
+    OddsNotFound *cotacaosrv.Odds `json:"not_found"`
 }
 func init() {
 
